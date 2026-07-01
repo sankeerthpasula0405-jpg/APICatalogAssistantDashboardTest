@@ -1,0 +1,28 @@
+# Run Script for API Catalog Assistant Dashboard
+
+$localNodePath = Join-Path $PSScriptRoot "..\node-dist\node-v20.11.0-win-x64"
+$playwrightNodePath = Join-Path $env:LOCALAPPDATA "ms-playwright-go\1.57.0"
+
+# Inject local node binaries into path for dependencies
+if (Test-Path $localNodePath) {
+    $env:PATH = "$localNodePath;$env:PATH"
+}
+
+# Run server using the best available Node.js executable
+if (Test-Path "$playwrightNodePath\node.exe") {
+    Write-Host "--------------------------------------------------------" -ForegroundColor Green
+    Write-Host "Starting API Catalog Assistant Dashboard" -ForegroundColor Green
+    Write-Host "Run-time: Playwright Node.js v24 (Native TypeScript)" -ForegroundColor Green
+    Write-Host "Dashboard URL: http://localhost:3000" -ForegroundColor Green
+    Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Green
+    Write-Host "--------------------------------------------------------" -ForegroundColor Green
+    & "$playwrightNodePath\node.exe" --experimental-strip-types src/server.ts
+} else {
+    Write-Host "--------------------------------------------------------" -ForegroundColor Green
+    Write-Host "Starting API Catalog Assistant Dashboard" -ForegroundColor Green
+    Write-Host "Run-time: Bundled Node.js + TSX" -ForegroundColor Green
+    Write-Host "Dashboard URL: http://localhost:3000" -ForegroundColor Green
+    Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Green
+    Write-Host "--------------------------------------------------------" -ForegroundColor Green
+    npx tsx src/server.ts
+}
