@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "description": "Quality rubric for OpenAPI specs. 12 rules across 4 categories. Each rule has a severity, and each severity carries a weight used to compute a 0-100 quality score.",
+  "categories": [
+    {
+      "id": "documentation",
+      "name": "Documentation",
+      "rules": [
+        {
+          "id": "DOC-01",
+          "title": "Operations are documented",
+          "severity": "medium",
+          "description": "Every operation defines both a non-empty summary and a description.",
+          "example": "Failing: a GET /orders/{id} with no summary or description."
+        },
+        {
+          "id": "DOC-02",
+          "title": "Parameters and schema properties are described",
+          "severity": "low",
+          "description": "Every parameter and every schema property has a description.",
+          "example": "Failing: a `status` query param with no description."
+        },
+        {
+          "id": "DOC-03",
+          "title": "Request and response bodies provide examples",
+          "severity": "low",
+          "description": "Request bodies and 2xx responses include at least one example or example value.",
+          "example": "Failing: a POST /payments with a schema but no sample payload."
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "rules": [
+        {
+          "id": "SEC-01",
+          "title": "Security schemes are defined",
+          "severity": "high",
+          "description": "The spec declares at least one security scheme under components.securitySchemes.",
+          "example": "Failing: a spec with no securitySchemes at all."
+        },
+        {
+          "id": "SEC-02",
+          "title": "Operations require authentication",
+          "severity": "high",
+          "description": "Every operation is covered by a security requirement, either globally (root `security`) or per-operation, unless explicitly marked public.",
+          "example": "Failing: a DELETE /users/{id} with no security applied and no global security."
+        },
+        {
+          "id": "SEC-03",
+          "title": "Transport and examples are safe",
+          "severity": "medium",
+          "description": "All server URLs use HTTPS, and examples contain no real-looking secrets, tokens, or PII.",
+          "example": "Failing: `servers: [{ url: 'http://api.example.com' }]` or an example Authorization header containing a live-looking key."
+        }
+      ]
+    },
+    {
+      "id": "design",
+      "name": "Design & Consistency",
+      "rules": [
+        {
+          "id": "DES-01",
+          "title": "Consistent path naming",
+          "severity": "medium",
+          "description": "Paths use lowercase, hyphenated, plural-noun resource segments and avoid trailing slashes or verbs in paths.",
+          "example": "Failing: mixing /orders and /order_items and /getInventory in one spec."
+        },
+        {
+          "id": "DES-02",
+          "title": "Consistent property casing",
+          "severity": "low",
+          "description": "Schema property names use a single consistent casing convention (default: camelCase).",
+          "example": "Failing: a schema with both `firstName` and `last_name`."
+        },
+        {
+          "id": "DES-03",
+          "title": "Operations have unique operationIds",
+          "severity": "medium",
+          "description": "Every operation defines an operationId, and all operationIds are unique within the spec.",
+          "example": "Failing: two operations both missing operationId, or two sharing 'getItem'."
+        }
+      ]
+    },
+    {
+      "id": "completeness",
+      "name": "Completeness & Reliability",
+      "rules": [
+        {
+          "id": "CMP-01",
+          "title": "Error responses are declared",
+          "severity": "medium",
+          "description": "Each operation declares at least one 4xx response, and mutating operations (POST/PUT/PATCH/DELETE) declare relevant client and server error responses.",
+          "example": "Failing: a POST /orders that only documents 200."
+        },
+        {
+          "id": "CMP-02",
+          "title": "Responses reference a schema",
+          "severity": "high",
+          "description": "Every 2xx response with a body references a schema (inline or via $ref); no empty content or untyped 'object' placeholders.",
+          "example": "Failing: `200: { description: 'OK' }` with no content, where a body is clearly returned."
+        },
+        {
+          "id": "CMP-03",
+          "title": "Spec metadata is complete",
+          "severity": "low",
+          "description": "info.version, info.title, info.contact, and at least one servers[] entry are present.",
+          "example": "Failing: a spec with no contact and no servers block."
+        }
+      ]
+    }
+  ]
+}

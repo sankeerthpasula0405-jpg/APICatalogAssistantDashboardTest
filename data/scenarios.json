@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "description": "10 scenarios a developer might bring to this catalog assistant, spanning natural-language Q&A, spec quality assessment, and ambiguous requests. These are inputs to your system — produce a result for each and self-assess accuracy.",
+  "types": {
+    "qa": "Natural-language question answerable from the catalog (and/or specs).",
+    "assess": "Assess the quality of a spec (or compare/rank specs) against the rubric.",
+    "ambiguous": "Underspecified, ambiguous, or partly-unanswerable — the right move may be to ask a clarifying question, state assumptions, or say what's missing."
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "type": "qa",
+      "prompt": "Which payment APIs are production-ready?"
+    },
+    {
+      "id": "S02",
+      "type": "qa",
+      "prompt": "What depends on the ledger-api? I want to know what breaks if I take it down."
+    },
+    {
+      "id": "S03",
+      "type": "qa",
+      "prompt": "Which APIs are exposed externally but not behind a gateway?"
+    },
+    {
+      "id": "S04",
+      "type": "qa",
+      "prompt": "Which deprecated APIs are still being depended on by active APIs?"
+    },
+    {
+      "id": "S05",
+      "type": "qa",
+      "prompt": "I'm building a feature that sends a customer an SMS when their order ships. Which APIs do I need?"
+    },
+    {
+      "id": "S06",
+      "type": "assess",
+      "prompt": "What's wrong with the inventory-api spec? Give me concrete fixes."
+    },
+    {
+      "id": "S07",
+      "type": "assess",
+      "prompt": "Does the shipping-api spec have any security problems?"
+    },
+    {
+      "id": "S08",
+      "type": "assess",
+      "prompt": "Rank all the specs from best to worst quality."
+    },
+    {
+      "id": "S09",
+      "type": "ambiguous",
+      "prompt": "Is the billing API any good?"
+    },
+    {
+      "id": "S10",
+      "type": "ambiguous",
+      "prompt": "Give me the spec for the search service so I can call its checkout endpoint."
+    }
+  ]
+}
