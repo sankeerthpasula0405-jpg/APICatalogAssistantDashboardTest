@@ -1,0 +1,392 @@
+openapi: 3.0.3
+info:
+  title: Identity API
+  description: Authentication and identity management service providing user registration, login, token refresh, and user management operations.
+  version: 1.4.0
+  contact:
+    name: Identity Platform Team
+    email: identity-team@example.com
+    url: https://developer.example.com/identity
+servers:
+  - url: https://api.example.com/identity/v1
+    description: Production server
+  - url: https://staging-api.example.com/identity/v1
+    description: Staging server
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      operationId: registerUser
+      summary: Register a new user
+      description: Creates a new user account using the supplied email and password, returning the created user record.
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+            example:
+              email: new.user@example.com
+              password: S3curePassw0rd!
+              displayName: New User
+      responses:
+        '201':
+          description: User successfully registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                email: new.user@example.com
+                displayName: New User
+                role: member
+                createdAt: '2026-06-19T10:15:30Z'
+                updatedAt: '2026-06-19T10:15:30Z'
+        '400':
+          description: Invalid registration payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: A user with the supplied email already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/login:
+    post:
+      operationId: loginUser
+      summary: Authenticate a user
+      description: Validates user credentials and issues an access token and refresh token on success.
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+            example:
+              email: existing.user@example.com
+              password: S3curePassw0rd!
+      responses:
+        '200':
+          description: Authentication succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh
+                tokenType: Bearer
+                expiresIn: 3600
+        '400':
+          description: Malformed credentials payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh an access token
+      security: []
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: A new access token was issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: The refresh token is invalid or expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      description: Returns a paginated collection of user records. Requires an authenticated request with administrative privileges.
+      tags:
+        - Users
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of users to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of users to skip before returning results.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: A page of user records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '401':
+          description: Authentication is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: The caller lacks permission to list users.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        description: Unique identifier of the user.
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      description: Retrieves a single user record by its unique identifier.
+      tags:
+        - Users
+      responses:
+        '200':
+          description: The requested user record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                email: existing.user@example.com
+                displayName: Existing User
+                role: member
+                createdAt: '2026-01-04T08:00:00Z'
+                updatedAt: '2026-05-20T14:22:10Z'
+        '401':
+          description: Authentication is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No user exists with the supplied identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: updateUser
+      summary: Update a user
+      description: Updates mutable fields of an existing user record and returns the updated representation.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: The updated user record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid update payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No user exists with the supplied identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the user.
+        email:
+          type: string
+          format: email
+          description: Email address of the user.
+        displayName:
+          type: string
+          description: Human-readable display name.
+        role:
+          type: string
+          description: Authorization role assigned to the user.
+          enum:
+            - member
+            - admin
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was last updated.
+    UserList:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        total:
+          type: integer
+          description: Total number of users matching the query.
+        limit:
+          type: integer
+          description: Page size that was applied.
+        offset:
+          type: integer
+          description: Offset that was applied.
+    RegistrationRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address for the new account.
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Plaintext password, hashed server-side.
+        displayName:
+          type: string
+          description: Optional display name for the new account.
+    Credentials:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Registered email address.
+        password:
+          type: string
+          format: password
+          description: Account password.
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: A previously issued refresh token.
+    TokenResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT access token.
+        refreshToken:
+          type: string
+          description: Long-lived refresh token.
+        tokenType:
+          type: string
+          description: The token type to use in the Authorization header.
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Lifetime of the access token in seconds.
+    UserUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: Updated display name.
+        role:
+          type: string
+          description: Updated authorization role.
+          enum:
+            - member
+            - admin
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.
+        details:
+          type: array
+          description: Optional list of field-level error details.
+          items:
+            type: string

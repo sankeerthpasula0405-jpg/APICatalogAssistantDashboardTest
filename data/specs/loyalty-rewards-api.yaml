@@ -1,0 +1,372 @@
+openapi: 3.0.3
+info:
+  title: Loyalty Rewards API
+  description: >-
+    API for managing member loyalty points and reward redemptions. Members can
+    view their points balance, earn points, redeem points, browse available
+    rewards, and redeem a specific reward.
+  version: 1.2.0
+  contact:
+    name: Loyalty Platform Team
+    email: loyalty-platform@example.com
+    url: https://developer.example.com/loyalty
+servers:
+  - url: https://api.example.com/loyalty/v1
+    description: Production
+  - url: https://sandbox.api.example.com/loyalty/v1
+    description: Sandbox
+security:
+  - bearerAuth: []
+paths:
+  /members/{memberId}/points:
+    get:
+      operationId: getMemberPoints
+      summary: Get a member's points balance
+      description: >-
+        Returns the current points balance for the specified member, including
+        the lifetime earned total and the tier the member currently belongs to.
+      tags:
+        - points
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: The member's current points balance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointsBalance'
+              example:
+                memberId: mbr_8f2a1c
+                balance: 4200
+                lifetimeEarned: 18750
+                tier: GOLD
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /members/{memberId}/points/earn:
+    post:
+      operationId: earnPoints
+      summary: Earn points for a member
+      description: >-
+        Credits points to a member's balance for a qualifying activity such as a
+        purchase or a promotional bonus. The request is idempotent when an
+        idempotency key is supplied.
+      tags:
+        - points
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EarnRequest'
+            example:
+              points: 250
+              source: PURCHASE
+              referenceId: ord_99812
+      responses:
+        '200':
+          description: Points were credited and the updated balance is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointsBalance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /members/{memberId}/points/redeem:
+    post:
+      operationId: redeemPoints
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedeemRequest'
+      responses:
+        '200':
+          description: Points redeemed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointsBalance'
+  /rewards:
+    get:
+      summary: List available rewards
+      description: >-
+        Returns the catalog of rewards that can be redeemed with points.
+        Results can be filtered by category and limited in size.
+      tags:
+        - rewards
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Filter rewards by category.
+          schema:
+            type: string
+            enum:
+              - TRAVEL
+              - MERCHANDISE
+              - GIFT_CARD
+              - EXPERIENCE
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of rewards to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: A list of rewards.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reward'
+              example:
+                - rewardId: rwd_travel_500
+                  name: $50 Travel Credit
+                  category: TRAVEL
+                  pointsCost: 5000
+                  available: true
+                - rewardId: rwd_gc_amazon_25
+                  name: $25 Gift Card
+                  category: GIFT_CARD
+                  pointsCost: 2500
+                  available: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /rewards/{rewardId}:
+    get:
+      operationId: getReward
+      tags:
+        - rewards
+      parameters:
+        - $ref: '#/components/parameters/RewardId'
+      responses:
+        '200':
+          description: Reward details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reward'
+  /rewards/{rewardId}/redemptions:
+    post:
+      operationId: getReward
+      summary: Redeem a reward
+      description: >-
+        Redeems the specified reward on behalf of a member. The member's points
+        balance must cover the reward's points cost or the request is rejected.
+      tags:
+        - rewards
+      parameters:
+        - $ref: '#/components/parameters/RewardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - memberId
+              properties:
+                memberId:
+                  type: string
+                  description: The member redeeming the reward.
+                quantity:
+                  type: integer
+                  minimum: 1
+                  default: 1
+            example:
+              memberId: mbr_8f2a1c
+              quantity: 1
+      responses:
+        '201':
+          description: The reward redemption was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Redemption'
+              example:
+                redemptionId: rdm_4421
+                rewardId: rwd_travel_500
+                memberId: mbr_8f2a1c
+                pointsSpent: 5000
+                status: CONFIRMED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: The member has insufficient points to redeem this reward.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      description: Unique identifier of the member.
+      schema:
+        type: string
+    RewardId:
+      name: rewardId
+      in: path
+      required: true
+      description: Unique identifier of the reward.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: The request was malformed or failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication credentials were missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The requested resource could not be found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    PointsBalance:
+      type: object
+      required:
+        - memberId
+        - balance
+      properties:
+        memberId:
+          type: string
+          description: Unique identifier of the member.
+        balance:
+          type: integer
+          description: Current redeemable points balance.
+        lifetimeEarned:
+          type: integer
+          description: Total points earned over the lifetime of the membership.
+        tier:
+          type: string
+          enum:
+            - BRONZE
+            - SILVER
+            - GOLD
+            - PLATINUM
+    EarnRequest:
+      type: object
+      required:
+        - points
+        - source
+      properties:
+        points:
+          type: integer
+          minimum: 1
+          description: Number of points to credit.
+        source:
+          type: string
+          enum:
+            - PURCHASE
+            - PROMOTION
+            - ADJUSTMENT
+            - REFERRAL
+        referenceId:
+          type: string
+          description: External reference, such as an order identifier.
+    RedeemRequest:
+      type: object
+      required:
+        - points
+      properties:
+        points:
+          type: integer
+          minimum: 1
+          description: Number of points to deduct.
+        reason:
+          type: string
+          description: Optional reason for the redemption.
+    Reward:
+      type: object
+      required:
+        - rewardId
+        - name
+        - pointsCost
+      properties:
+        rewardId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum:
+            - TRAVEL
+            - MERCHANDISE
+            - GIFT_CARD
+            - EXPERIENCE
+        pointsCost:
+          type: integer
+          minimum: 0
+        available:
+          type: boolean
+    Redemption:
+      type: object
+      required:
+        - redemptionId
+        - rewardId
+        - memberId
+      properties:
+        redemptionId:
+          type: string
+        rewardId:
+          type: string
+        memberId:
+          type: string
+        points_spent:
+          type: integer
+          description: Number of points spent on this redemption.
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - CANCELLED
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.

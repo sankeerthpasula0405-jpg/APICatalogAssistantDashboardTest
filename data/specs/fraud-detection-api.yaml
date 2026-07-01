@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: fraud-detection-api
+  version: 1.4.0
+servers:
+  - url: https://risk-internal.example.com/fraud/v1
+security:
+  - apiKeyAuth: []
+paths:
+  /evaluations:
+    post:
+      summary: Score a transaction
+      operationId: createEvaluation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResult'
+    get:
+      summary: List evaluations
+      operationId: listEvaluations
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /evaluations/{evaluationId}:
+    get:
+      summary: Get evaluation
+      operationId: getEvaluation
+      parameters:
+        - name: evaluationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResult'
+  /feedback:
+    post:
+      summary: Submit feedback
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '202':
+          description: Accepted
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    EvaluationRequest:
+      type: object
+      required:
+        - customerId
+        - amount
+        - currency
+      properties:
+        customerId:
+          type: string
+        transactionId:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        merchantCategory:
+          type: string
+        ipAddress:
+          type: string
+        deviceFingerprint:
+          type: string
+        billingCountry:
+          type: string
+    EvaluationResult:
+      type: object
+      properties:
+        evaluationId:
+          type: string
+        riskScore:
+          type: number
+          format: float
+        decision:
+          type: string
+          enum:
+            - approve
+            - review
+            - decline
+        createdAt:
+          type: string
+          format: date-time
+    FeedbackRequest:
+      type: object
+      required:
+        - evaluationId
+        - outcome
+      properties:
+        evaluationId:
+          type: string
+        outcome:
+          type: string
+          enum:
+            - fraud
+            - legitimate
+        notes:
+          type: string

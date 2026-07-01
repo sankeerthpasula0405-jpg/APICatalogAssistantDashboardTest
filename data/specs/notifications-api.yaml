@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: Notifications API
+  description: Service for sending notifications, managing templates, and tracking delivery status.
+  version: 1.4.0
+  contact:
+    name: Notifications Platform Team
+    email: notifications-team@example.com
+    url: https://developer.example.com/notifications
+servers:
+  - url: https://api.example.com/notifications/v1
+    description: Production
+  - url: https://staging-api.example.com/notifications/v1
+    description: Staging
+security:
+  - bearerAuth: []
+paths:
+  /sendNotification:
+    post:
+      summary: Send a notification
+      description: Sends a notification to a recipient using either inline content or a referenced template.
+      operationId: sendNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+      responses:
+        '202':
+          description: Notification accepted for delivery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '400':
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /notifications/{id}:
+    get:
+      summary: Get a notification
+      description: Retrieves a previously submitted notification by its identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the notification.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The requested notification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '404':
+          description: Notification not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /notification_templates:
+    get:
+      summary: List templates
+      description: Returns the collection of notification templates available to the caller.
+      operationId: listTemplates
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of templates to return.
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: A list of templates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a template
+      description: Creates a new notification template.
+      operationId: listTemplates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Template'
+      responses:
+        '201':
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          description: Invalid template definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /templates/{templateId}:
+    get:
+      summary: Get a template
+      description: Retrieves a single template by its identifier.
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          description: Unique identifier of the template.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The requested template.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /notifications/{id}/delivery_status:
+    get:
+      summary: Get delivery status
+      description: Returns the current delivery status for a given notification.
+      operationId: getDeliveryStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the notification.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The delivery status of the notification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryStatus'
+        '404':
+          description: Notification not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required or token invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the notification.
+        recipientId:
+          type: string
+          description: Identifier of the recipient.
+        template_id:
+          type: string
+          description: Identifier of the template used, if any.
+        channel:
+          type: string
+          enum:
+            - email
+            - sms
+            - push
+        subject:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        sentAt:
+          type: string
+          format: date-time
+      required:
+        - recipientId
+        - channel
+    Template:
+      type: object
+      properties:
+        templateId:
+          type: string
+          description: Unique identifier of the template.
+        name:
+          type: string
+        channel:
+          type: string
+          enum:
+            - email
+            - sms
+            - push
+        subject_template:
+          type: string
+        bodyTemplate:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - channel
+        - bodyTemplate
+    DeliveryStatus:
+      type: object
+      properties:
+        notificationId:
+          type: string
+        status:
+          type: string
+          enum:
+            - queued
+            - sent
+            - delivered
+            - failed
+        attempt_count:
+          type: integer
+          format: int32
+        last_updated:
+          type: string
+          format: date-time
+        failureReason:
+          type: string
+      required:
+        - notificationId
+        - status
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+      required:
+        - code
+        - message

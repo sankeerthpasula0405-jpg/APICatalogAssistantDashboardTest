@@ -1,0 +1,493 @@
+openapi: 3.0.3
+info:
+  title: Shipping API
+  description: API for creating shipments, retrieving shipping rates, and generating labels.
+  version: 1.4.0
+  contact:
+    name: Shipping Platform Team
+    email: shipping-support@example.com
+    url: https://developer.example.com/shipping
+servers:
+  - url: http://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+paths:
+  /shipments:
+    post:
+      summary: Create a shipment
+      description: Creates a new shipment using the provided origin, destination, and parcel details.
+      operationId: createShipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentRequest'
+            example:
+              fromAddress:
+                name: Acme Warehouse
+                street1: 100 Commerce Way
+                city: Columbus
+                state: OH
+                postalCode: "43004"
+                country: US
+              toAddress:
+                name: Jane Doe
+                street1: 742 Evergreen Terrace
+                city: Springfield
+                state: IL
+                postalCode: "62704"
+                country: US
+              parcel:
+                weight: 2.5
+                length: 12
+                width: 8
+                height: 6
+      responses:
+        '201':
+          description: Shipment created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '400':
+          description: Invalid shipment request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation failed for one or more fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List shipments
+      description: Returns a paginated list of shipments, optionally filtered by status.
+      operationId: listShipments
+      parameters:
+        - name: status
+          in: query
+          description: Filter shipments by their current status.
+          required: false
+          schema:
+            type: string
+            enum:
+              - created
+              - in_transit
+              - delivered
+              - cancelled
+        - name: limit
+          in: query
+          description: Maximum number of shipments to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of shipments to skip for pagination.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: A paginated list of shipments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentList'
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /shipments/{shipmentId}:
+    get:
+      summary: Get a shipment
+      description: Retrieves a single shipment by its unique identifier.
+      operationId: getShipment
+      parameters:
+        - name: shipmentId
+          in: path
+          description: Unique identifier of the shipment.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The requested shipment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+              example:
+                shipmentId: shp_8f3a2b1c
+                status: created
+                fromAddress:
+                  name: Acme Warehouse
+                  street1: 100 Commerce Way
+                  city: Columbus
+                  state: OH
+                  postalCode: "43004"
+                  country: US
+                toAddress:
+                  name: Jane Doe
+                  street1: 742 Evergreen Terrace
+                  city: Springfield
+                  state: IL
+                  postalCode: "62704"
+                  country: US
+                parcel:
+                  weight: 2.5
+                  length: 12
+                  width: 8
+                  height: 6
+                createdAt: "2026-06-19T14:30:00Z"
+        '404':
+          description: Shipment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Cancel a shipment
+      description: Cancels an existing shipment if it has not yet shipped.
+      operationId: cancelShipment
+      parameters:
+        - name: shipmentId
+          in: path
+          description: Unique identifier of the shipment to cancel.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The cancelled shipment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '404':
+          description: Shipment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Shipment cannot be cancelled in its current state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /rates:
+    post:
+      summary: Get shipping rates
+      description: Returns available shipping rates for a given origin, destination, and parcel.
+      operationId: getRates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateRequest'
+      responses:
+        '200':
+          description: A list of available rates.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateList'
+        '400':
+          description: Invalid rate request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation failed for one or more fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /labels:
+    post:
+      summary: Create a label
+      description: Generates a shipping label for a shipment using a selected rate.
+      operationId: createLabel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelRequest'
+      responses:
+        '201':
+          description: Label created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        '400':
+          description: Invalid label request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Referenced shipment or rate not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Address:
+      type: object
+      required:
+        - name
+        - street1
+        - city
+        - postalCode
+        - country
+      properties:
+        name:
+          type: string
+          description: Name of the recipient or sender.
+        company:
+          type: string
+          description: Optional company name.
+        street1:
+          type: string
+          description: Primary street address line.
+        street2:
+          type: string
+          description: Secondary street address line.
+        city:
+          type: string
+          description: City name.
+        state:
+          type: string
+          description: State or province code.
+        postalCode:
+          type: string
+          description: Postal or ZIP code.
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+        phone:
+          type: string
+          description: Contact phone number.
+    Parcel:
+      type: object
+      required:
+        - weight
+      properties:
+        weight:
+          type: number
+          format: float
+          description: Weight of the parcel in pounds.
+        length:
+          type: number
+          format: float
+          description: Length of the parcel in inches.
+        width:
+          type: number
+          format: float
+          description: Width of the parcel in inches.
+        height:
+          type: number
+          format: float
+          description: Height of the parcel in inches.
+    ShipmentRequest:
+      type: object
+      required:
+        - fromAddress
+        - toAddress
+        - parcel
+      properties:
+        fromAddress:
+          $ref: '#/components/schemas/Address'
+        toAddress:
+          $ref: '#/components/schemas/Address'
+        parcel:
+          $ref: '#/components/schemas/Parcel'
+    Shipment:
+      type: object
+      required:
+        - shipmentId
+        - status
+        - fromAddress
+        - toAddress
+        - parcel
+      properties:
+        shipmentId:
+          type: string
+          description: Unique identifier of the shipment.
+        status:
+          type: string
+          description: Current status of the shipment.
+          enum:
+            - created
+            - in_transit
+            - delivered
+            - cancelled
+        fromAddress:
+          $ref: '#/components/schemas/Address'
+        toAddress:
+          $ref: '#/components/schemas/Address'
+        parcel:
+          $ref: '#/components/schemas/Parcel'
+        trackingNumber:
+          type: string
+          description: Carrier tracking number, if assigned.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the shipment was created.
+    ShipmentList:
+      type: object
+      required:
+        - data
+        - total
+      properties:
+        data:
+          type: array
+          description: The list of shipments.
+          items:
+            $ref: '#/components/schemas/Shipment'
+        total:
+          type: integer
+          description: Total number of shipments matching the query.
+        limit:
+          type: integer
+          description: Maximum number of results returned.
+        offset:
+          type: integer
+          description: Number of results skipped.
+    RateRequest:
+      type: object
+      required:
+        - fromAddress
+        - toAddress
+        - parcel
+      properties:
+        fromAddress:
+          $ref: '#/components/schemas/Address'
+        toAddress:
+          $ref: '#/components/schemas/Address'
+        parcel:
+          $ref: '#/components/schemas/Parcel'
+    Rate:
+      type: object
+      required:
+        - rateId
+        - carrier
+        - service
+        - amount
+        - currency
+      properties:
+        rateId:
+          type: string
+          description: Unique identifier of the rate.
+        carrier:
+          type: string
+          description: Name of the shipping carrier.
+        service:
+          type: string
+          description: Carrier service level.
+        amount:
+          type: number
+          format: float
+          description: Cost of the shipment for this rate.
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+        estimatedDays:
+          type: integer
+          description: Estimated number of days for delivery.
+    RateList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          description: The list of available rates.
+          items:
+            $ref: '#/components/schemas/Rate'
+    LabelRequest:
+      type: object
+      required:
+        - shipmentId
+        - rateId
+      properties:
+        shipmentId:
+          type: string
+          description: Identifier of the shipment to label.
+        rateId:
+          type: string
+          description: Identifier of the selected rate.
+        labelFormat:
+          type: string
+          description: Desired label file format.
+          enum:
+            - pdf
+            - png
+            - zpl
+          default: pdf
+    Label:
+      type: object
+      required:
+        - labelId
+        - shipmentId
+        - labelUrl
+        - trackingNumber
+      properties:
+        labelId:
+          type: string
+          description: Unique identifier of the label.
+        shipmentId:
+          type: string
+          description: Identifier of the associated shipment.
+        rateId:
+          type: string
+          description: Identifier of the rate used to purchase the label.
+        trackingNumber:
+          type: string
+          description: Carrier tracking number for the shipment.
+        labelUrl:
+          type: string
+          format: uri
+          description: URL where the generated label can be downloaded.
+        labelFormat:
+          type: string
+          description: File format of the generated label.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the label was created.
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error message.
+        details:
+          type: array
+          description: Optional list of field-level error details.
+          items:
+            type: string

@@ -1,0 +1,363 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  version: 1.0.0
+  description: >-
+    API for managing customer orders, including creation, retrieval, listing,
+    cancellation, item inspection, and status updates.
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging.api.example.com/v1
+    description: Staging server
+security:
+  - bearerAuth: []
+tags:
+  - name: orders
+    description: Operations for managing orders.
+  - name: items
+    description: Operations for inspecting order line items.
+paths:
+  /orders:
+    get:
+      tags:
+        - orders
+      summary: List orders
+      description: Returns a paginated list of orders for the authenticated account.
+      operationId: listOrders
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of orders to return per page.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of orders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '401':
+          description: Authentication is required or has failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - orders
+      summary: Create order
+      description: Creates a new order with one or more line items and a shipping address.
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            example:
+              customerId: cust_8f2c11
+              items:
+                - sku: SKU-1001
+                  quantity: 2
+                  unitPrice: 19.99
+                - sku: SKU-2042
+                  quantity: 1
+                  unitPrice: 4.50
+              shippingAddress:
+                line1: 100 Market Street
+                line2: Suite 400
+                city: Springfield
+                region: IL
+                postalCode: '62701'
+                country: US
+      responses:
+        '201':
+          description: The order was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: ord_a1b2c3
+                customerId: cust_8f2c11
+                status: pending
+                currency: USD
+                total: 44.48
+                items:
+                  - id: item_001
+                    sku: SKU-1001
+                    quantity: 2
+                    unitPrice: 19.99
+                  - id: item_002
+                    sku: SKU-2042
+                    quantity: 1
+                    unitPrice: 4.50
+                shippingAddress:
+                  line1: 100 Market Street
+                  line2: Suite 400
+                  city: Springfield
+                  region: IL
+                  postalCode: '62701'
+                  country: US
+                createdAt: '2026-06-19T14:32:00Z'
+        '400':
+          description: The request body is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication is required or has failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Unique identifier of the order.
+        schema:
+          type: string
+    get:
+      tags:
+        - orders
+      summary: Get order
+      description: Retrieves a single order by its identifier.
+      operationId: getOrder
+      responses:
+        '200':
+          description: The requested order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: No order exists with the given identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - orders
+      summary: Update order status
+      description: Transitions an order to a new status.
+      operationId: updateOrderStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: The updated order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+  /orders/{orderId}/items:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Unique identifier of the order.
+        schema:
+          type: string
+    get:
+      tags:
+        - items
+      summary: List order items
+      description: Returns the line items belonging to the specified order.
+      operationId: listOrderItems
+      responses:
+        '200':
+          description: The list of line items for the order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderItem'
+        '404':
+          description: No order exists with the given identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders/{orderId}/cancel:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Unique identifier of the order.
+        schema:
+          type: string
+    post:
+      tags:
+        - orders
+      summary: Cancel order
+      description: Cancels an order if it has not yet shipped.
+      operationId: cancelOrder
+      responses:
+        '200':
+          description: The cancelled order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    OrderStatus:
+      type: string
+      description: Lifecycle status of an order.
+      enum:
+        - pending
+        - paid
+        - shipped
+        - delivered
+        - cancelled
+    Address:
+      type: object
+      required:
+        - line1
+        - city
+        - postalCode
+        - country
+      properties:
+        line1:
+          type: string
+          description: Primary street address line.
+        line2:
+          type: string
+        city:
+          type: string
+        region:
+          type: string
+          description: State, province, or region.
+        postalCode:
+          type: string
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+    OrderItem:
+      type: object
+      required:
+        - sku
+        - quantity
+        - unitPrice
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+          description: Stock keeping unit identifying the product.
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+    Order:
+      type: object
+      required:
+        - id
+        - customerId
+        - status
+        - items
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the order.
+        customerId:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+        total:
+          type: number
+          format: double
+          description: Total amount for the order.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+    OrderList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        nextCursor:
+          type: string
+          description: Cursor to retrieve the next page, if any.
+    CreateOrderRequest:
+      type: object
+      required:
+        - customerId
+        - items
+      properties:
+        customerId:
+          type: string
+          description: Identifier of the customer placing the order.
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+    UpdateOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.

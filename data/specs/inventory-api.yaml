@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  title: Inventory API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/inventory/v1
+security:
+  - bearerAuth: []
+paths:
+  /stock:
+    get:
+      summary: List stock levels
+      operationId: listStock
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockLevel'
+                  total:
+                    type: integer
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /stock/{sku}:
+    get:
+      summary: Get stock for a sku
+      operationId: getStockBySku
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockLevel'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /stock/{sku}/adjustments:
+    get:
+      summary: List adjustments for a sku
+      operationId: listAdjustments
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adjustment'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Adjust stock for a sku
+      operationId: createAdjustment
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustmentRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adjustment'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /warehouses:
+    get:
+      summary: List warehouses
+      operationId: listWarehouses
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Warehouse'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /warehouses/{warehouseId}/stock:
+    get:
+      summary: Get warehouse stock
+      operationId: getWarehouseStock
+      parameters:
+        - name: warehouseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockLevel'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    StockLevel:
+      type: object
+      properties:
+        sku:
+          type: string
+        warehouseId:
+          type: string
+        quantityOnHand:
+          type: integer
+        quantityReserved:
+          type: integer
+        quantityAvailable:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - sku
+        - warehouseId
+        - quantityOnHand
+    Warehouse:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        name:
+          type: string
+        region:
+          type: string
+        active:
+          type: boolean
+      required:
+        - warehouseId
+        - name
+    Adjustment:
+      type: object
+      properties:
+        adjustmentId:
+          type: string
+        sku:
+          type: string
+        warehouseId:
+          type: string
+        delta:
+          type: integer
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - adjustmentId
+        - sku
+        - delta
+    AdjustmentRequest:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        delta:
+          type: integer
+        reason:
+          type: string
+      required:
+        - warehouseId
+        - delta
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message

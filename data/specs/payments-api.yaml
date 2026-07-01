@@ -1,0 +1,649 @@
+openapi: 3.0.3
+info:
+  title: Payments API
+  version: 1.0.0
+  description: >-
+    A payment processing API for creating, retrieving, capturing, and refunding
+    payments, as well as listing stored payment methods. All monetary values are
+    expressed using a Money object with an explicit amount and ISO 4217 currency.
+  contact:
+    name: Payments API Support
+    email: support@example.com
+    url: https://developer.example.com/support
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://sandbox.api.example.com/v1
+    description: Sandbox server for testing
+security:
+  - bearerAuth: []
+tags:
+  - name: Payments
+    description: Operations for creating and managing payments.
+  - name: Payment Methods
+    description: Operations for listing stored payment methods.
+paths:
+  /payments:
+    get:
+      tags:
+        - Payments
+      operationId: listPayments
+      summary: List payments
+      description: >-
+        Returns a paginated list of payments ordered by creation time, most
+        recent first. Supports filtering by status and limiting page size.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter payments by their current processing status.
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of payments to return per page.
+          schema:
+            type: integer
+            description: Page size, between 1 and 100.
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor returned by a previous list request.
+          schema:
+            type: string
+            description: Cursor pointing to the next page of results.
+      responses:
+        '200':
+          description: A paginated list of payments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentList'
+              example:
+                data:
+                  - id: pay_test_123
+                    status: succeeded
+                    amount:
+                      amount: 4999
+                      currency: USD
+                    paymentMethodId: pm_test_456
+                    description: Order #1001
+                    createdAt: '2026-06-18T14:30:00Z'
+                    capturedAt: '2026-06-18T14:30:05Z'
+                nextCursor: cursor_test_abc
+                hasMore: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Payments
+      operationId: createPayment
+      summary: Create a payment
+      description: >-
+        Creates a new payment for the given amount and payment method. By default
+        the payment is authorized and captured immediately; set capture to false
+        to authorize only and capture later.
+      requestBody:
+        required: true
+        description: The details of the payment to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            example:
+              amount:
+                amount: 4999
+                currency: USD
+              paymentMethodId: pm_test_456
+              description: Order #1001
+              capture: true
+      responses:
+        '201':
+          description: The payment was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: pay_test_123
+                status: succeeded
+                amount:
+                  amount: 4999
+                  currency: USD
+                paymentMethodId: pm_test_456
+                description: Order #1001
+                createdAt: '2026-06-18T14:30:00Z'
+                capturedAt: '2026-06-18T14:30:05Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /payments/{paymentId}:
+    get:
+      tags:
+        - Payments
+      operationId: getPayment
+      summary: Retrieve a payment
+      description: Retrieves the details of a single payment by its unique identifier.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: The requested payment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: pay_test_123
+                status: succeeded
+                amount:
+                  amount: 4999
+                  currency: USD
+                paymentMethodId: pm_test_456
+                description: Order #1001
+                createdAt: '2026-06-18T14:30:00Z'
+                capturedAt: '2026-06-18T14:30:05Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/{paymentId}/capture:
+    post:
+      tags:
+        - Payments
+      operationId: capturePayment
+      summary: Capture a payment
+      description: >-
+        Captures a previously authorized payment. An optional amount may be
+        supplied to capture less than the originally authorized amount.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: false
+        description: Optional capture parameters.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapturePaymentRequest'
+            example:
+              amount:
+                amount: 4999
+                currency: USD
+      responses:
+        '200':
+          description: The payment was captured successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: pay_test_123
+                status: succeeded
+                amount:
+                  amount: 4999
+                  currency: USD
+                paymentMethodId: pm_test_456
+                description: Order #1001
+                createdAt: '2026-06-18T14:30:00Z'
+                capturedAt: '2026-06-18T14:30:05Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/{paymentId}/refunds:
+    get:
+      tags:
+        - Payments
+      operationId: listRefunds
+      summary: List refunds for a payment
+      description: Returns the list of refunds that have been issued against a payment.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: A list of refunds for the payment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundList'
+              example:
+                data:
+                  - id: re_test_789
+                    paymentId: pay_test_123
+                    amount:
+                      amount: 1000
+                      currency: USD
+                    reason: requested_by_customer
+                    status: succeeded
+                    createdAt: '2026-06-18T15:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - Payments
+      operationId: createRefund
+      summary: Refund a payment
+      description: >-
+        Issues a full or partial refund against a captured payment. Omit the
+        amount to refund the full remaining capturable amount.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        description: The details of the refund to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefundRequest'
+            example:
+              amount:
+                amount: 1000
+                currency: USD
+              reason: requested_by_customer
+      responses:
+        '201':
+          description: The refund was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+              example:
+                id: re_test_789
+                paymentId: pay_test_123
+                amount:
+                  amount: 1000
+                  currency: USD
+                reason: requested_by_customer
+                status: succeeded
+                createdAt: '2026-06-18T15:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payment-methods:
+    get:
+      tags:
+        - Payment Methods
+      operationId: listPaymentMethods
+      summary: List payment methods
+      description: >-
+        Returns a paginated list of stored payment methods, optionally filtered
+        by the customer that owns them.
+      parameters:
+        - name: customerId
+          in: query
+          required: false
+          description: Filter payment methods belonging to a specific customer.
+          schema:
+            type: string
+            description: The unique identifier of the customer.
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of payment methods to return per page.
+          schema:
+            type: integer
+            description: Page size, between 1 and 100.
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: A paginated list of payment methods.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodList'
+              example:
+                data:
+                  - id: pm_test_456
+                    type: card
+                    customerId: cus_test_321
+                    brand: visa
+                    last4: '4242'
+                    expMonth: 12
+                    expYear: 2030
+                    createdAt: '2026-01-10T09:00:00Z'
+                nextCursor: null
+                hasMore: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication using a JWT access token.
+  parameters:
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      description: The unique identifier of the payment.
+      schema:
+        type: string
+        description: Opaque payment identifier.
+        example: pay_test_123
+  responses:
+    BadRequest:
+      description: The request was malformed or contained invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: invalid_request
+            message: The amount must be a positive integer.
+    Unauthorized:
+      description: Authentication credentials were missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: unauthorized
+            message: Missing or invalid access token.
+    NotFound:
+      description: The requested resource could not be found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: not_found
+            message: No payment exists with the given identifier.
+  schemas:
+    Money:
+      type: object
+      description: A monetary amount in the smallest currency unit with its currency.
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: The amount in the smallest currency unit, such as cents.
+          example: 4999
+        currency:
+          type: string
+          description: The ISO 4217 three-letter currency code.
+          example: USD
+    PaymentStatus:
+      type: string
+      description: The current processing status of a payment.
+      enum:
+        - requires_capture
+        - succeeded
+        - failed
+        - canceled
+        - refunded
+      example: succeeded
+    Payment:
+      type: object
+      description: A payment representing a charge against a payment method.
+      required:
+        - id
+        - status
+        - amount
+        - paymentMethodId
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the payment.
+          example: pay_test_123
+        status:
+          allOf:
+            - $ref: '#/components/schemas/PaymentStatus'
+          description: The current processing status of the payment.
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: The monetary amount of the payment.
+        paymentMethodId:
+          type: string
+          description: The identifier of the payment method used for the payment.
+          example: pm_test_456
+        description:
+          type: string
+          description: An optional human-readable description of the payment.
+          example: Order #1001
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the payment was created.
+          example: '2026-06-18T14:30:00Z'
+        capturedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The timestamp when the payment was captured, if applicable.
+          example: '2026-06-18T14:30:05Z'
+    CreatePaymentRequest:
+      type: object
+      description: The parameters required to create a new payment.
+      required:
+        - amount
+        - paymentMethodId
+      properties:
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: The monetary amount to charge.
+        paymentMethodId:
+          type: string
+          description: The identifier of the payment method to charge.
+          example: pm_test_456
+        description:
+          type: string
+          description: An optional human-readable description of the payment.
+          example: Order #1001
+        capture:
+          type: boolean
+          description: Whether to capture the payment immediately after authorization.
+          default: true
+          example: true
+    CapturePaymentRequest:
+      type: object
+      description: The parameters for capturing an authorized payment.
+      properties:
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: >-
+            The amount to capture. Defaults to the full authorized amount when
+            omitted.
+    CreateRefundRequest:
+      type: object
+      description: The parameters for issuing a refund against a payment.
+      properties:
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: >-
+            The amount to refund. Defaults to the full remaining amount when
+            omitted.
+        reason:
+          allOf:
+            - $ref: '#/components/schemas/RefundReason'
+          description: The reason the refund is being issued.
+    RefundReason:
+      type: string
+      description: The reason a refund was issued.
+      enum:
+        - requested_by_customer
+        - duplicate
+        - fraudulent
+      example: requested_by_customer
+    Refund:
+      type: object
+      description: A refund issued against a previously captured payment.
+      required:
+        - id
+        - paymentId
+        - amount
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the refund.
+          example: re_test_789
+        paymentId:
+          type: string
+          description: The identifier of the payment that was refunded.
+          example: pay_test_123
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: The monetary amount that was refunded.
+        reason:
+          allOf:
+            - $ref: '#/components/schemas/RefundReason'
+          description: The reason the refund was issued.
+        status:
+          type: string
+          description: The current status of the refund.
+          enum:
+            - pending
+            - succeeded
+            - failed
+          example: succeeded
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the refund was created.
+          example: '2026-06-18T15:00:00Z'
+    PaymentMethod:
+      type: object
+      description: A stored payment method belonging to a customer.
+      required:
+        - id
+        - type
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the payment method.
+          example: pm_test_456
+        type:
+          type: string
+          description: The type of the payment method.
+          enum:
+            - card
+            - bank_account
+          example: card
+        customerId:
+          type: string
+          description: The identifier of the customer that owns the payment method.
+          example: cus_test_321
+        brand:
+          type: string
+          description: The card brand, when the payment method is a card.
+          example: visa
+        last4:
+          type: string
+          description: The last four digits of the card or bank account number.
+          example: '4242'
+        expMonth:
+          type: integer
+          description: The two-digit expiration month of the card.
+          example: 12
+        expYear:
+          type: integer
+          description: The four-digit expiration year of the card.
+          example: 2030
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the payment method was created.
+          example: '2026-01-10T09:00:00Z'
+    PaymentList:
+      type: object
+      description: A paginated collection of payments.
+      required:
+        - data
+        - hasMore
+      properties:
+        data:
+          type: array
+          description: The list of payments on the current page.
+          items:
+            $ref: '#/components/schemas/Payment'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for retrieving the next page, if any.
+          example: cursor_test_abc
+        hasMore:
+          type: boolean
+          description: Whether more payments are available beyond this page.
+          example: false
+    RefundList:
+      type: object
+      description: A collection of refunds for a payment.
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          description: The list of refunds.
+          items:
+            $ref: '#/components/schemas/Refund'
+    PaymentMethodList:
+      type: object
+      description: A paginated collection of payment methods.
+      required:
+        - data
+        - hasMore
+      properties:
+        data:
+          type: array
+          description: The list of payment methods on the current page.
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for retrieving the next page, if any.
+          example: cursor_test_def
+        hasMore:
+          type: boolean
+          description: Whether more payment methods are available beyond this page.
+          example: false
+    Error:
+      type: object
+      description: A standard error response.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: A machine-readable error code.
+          example: invalid_request
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: The amount must be a positive integer.

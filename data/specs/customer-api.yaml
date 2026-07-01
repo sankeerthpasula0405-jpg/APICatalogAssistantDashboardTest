@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Customer API
+  description: API for managing customer profiles and their personal information.
+  version: 1.0.0
+paths:
+  /customers:
+    get:
+      summary: List customers
+      description: Returns a paginated list of customer profiles.
+      operationId: listCustomers
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of customers to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create customer
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Customer created successfully.
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /customers/{customerId}:
+    parameters:
+      - name: customerId
+        in: path
+        required: true
+        description: Unique identifier of the customer.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get customer
+      description: Retrieves a single customer profile by its identifier.
+      operationId: getCustomer
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update customer
+      operationId: updateCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Customer not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete customer
+      operationId: deleteCustomer
+      responses:
+        '204':
+          description: Customer deleted successfully.
+        '404':
+          description: Customer not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    Customer:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+          example: Jane
+        lastName:
+          type: string
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: jane.doe@gmail.com
+        phone:
+          type: string
+          example: "+1-415-555-0142"
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1987-03-14"
+        ssn:
+          type: string
+          description: Social security number of the customer.
+          example: "[REDACTED_SOCIAL_SECURITY_NUMBER_1]"
+        createdAt:
+          type: string
+          format: date-time
+    CustomerInput:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+          example: jane.doe@gmail.com
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        ssn:
+          type: string
+          example: "[REDACTED_SOCIAL_SECURITY_NUMBER_1]"
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
