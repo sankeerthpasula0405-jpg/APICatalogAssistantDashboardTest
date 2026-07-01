@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Catalog Assistant Dashboard</title>
+  <!-- Outfit Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Markdown parser library for rendering assistant answers -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="glass-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-pulse"></div>
+        <h1>API Catalog Assistant</h1>
+      </div>
+      <div class="header-controls">
+        <div class="api-key-input-group">
+          <label for="apiKeyInput">Gemini API Key:</label>
+          <input type="password" id="apiKeyInput" placeholder="Enter key (optional)..." title="Enter your Gemini API key to enable advanced LLM reasoning. Runs locally if omitted.">
+          <button id="saveKeyBtn" class="btn-sec">Save</button>
+        </div>
+        <div class="status-indicator">
+          <span class="pulse-dot green"></span>
+          <span class="status-text">Server Connected</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="app-nav">
+      <button class="nav-tab active" data-tab="assistant">AI Assistant</button>
+      <button class="nav-tab" data-tab="catalog">API Catalog</button>
+      <button class="nav-tab" data-tab="quality">Spec Quality</button>
+      <button class="nav-tab" data-tab="deliverables">Deliverables</button>
+    </nav>
+
+    <!-- App Body Content -->
+    <main class="app-content">
+
+      <!-- Panel 1: AI Assistant Chat -->
+      <section id="panel-assistant" class="tab-panel active">
+        <div class="assistant-layout">
+          <!-- Chat Log Area -->
+          <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+              <div class="message assistant">
+                <div class="message-sender">Assistant</div>
+                <div class="message-text">
+                  <p>Hello! I am your <strong>API Catalog Assistant</strong>. I can help you search the catalog of 60 APIs, assess OpenAPI spec quality, or clarify ambiguous requests.</p>
+                  <p>To get started, try asking a question or click one of the pre-configured scenarios on the right!</p>
+                </div>
+              </div>
+            </div>
+            <!-- Input Area -->
+            <div class="chat-input-bar">
+              <input type="text" id="chatInput" placeholder="Ask a question about the catalog or specs..." autocomplete="off">
+              <button id="sendBtn" class="btn-primary">Send</button>
+            </div>
+          </div>
+
+          <!-- Scenario Shortcuts Area -->
+          <div class="scenario-sidebar">
+            <h3>Test Scenarios (S01 - S10)</h3>
+            <p class="sidebar-desc">Click any scenario below to execute it against the catalog assistant and review its graded output:</p>
+            <div class="scenario-list" id="scenarioList">
+              <!-- Dynamically Loaded Scenarios -->
+              <div class="loading-spinner">Loading scenarios...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: API Catalog Browser -->
+      <section id="panel-catalog" class="tab-panel">
+        <div class="catalog-header-controls">
+          <div class="search-box">
+            <input type="text" id="catalogSearch" placeholder="Search by name, tags, owner...">
+          </div>
+          <div class="filter-controls">
+            <select id="domainFilter">
+              <option value="">All Domains</option>
+            </select>
+            <select id="statusFilter">
+              <option value="">All Statuses</option>
+              <option value="production">Production</option>
+              <option value="beta">Beta</option>
+              <option value="development">Development</option>
+              <option value="deprecated">Deprecated</option>
+            </select>
+            <select id="protocolFilter">
+              <option value="">All Protocols</option>
+              <option value="REST">REST</option>
+              <option value="gRPC">gRPC</option>
+              <option value="GraphQL">GraphQL</option>
+              <option value="Kafka">Kafka</option>
+              <option value="MQTT">MQTT</option>
+              <option value="SOAP">SOAP</option>
+            </select>
+          </div>
+          <div class="catalog-stats">
+            Total APIs: <span id="catalogCount">0</span>
+          </div>
+        </div>
+        
+        <!-- Grid list of APIs -->
+        <div class="catalog-grid" id="catalogGrid">
+          <div class="loading-spinner">Loading catalog...</div>
+        </div>
+      </section>
+
+      <!-- Panel 3: Spec Quality Dashboard -->
+      <section id="panel-quality" class="tab-panel">
+        <div class="quality-layout">
+          <!-- Quality Ranking list -->
+          <div class="quality-sidebar">
+            <h3>Grades & Rankings</h3>
+            <div class="spec-rank-list" id="specRankList">
+              <div class="loading-spinner">Loading spec rankings...</div>
+            </div>
+          </div>
+
+          <!-- Quality Details view -->
+          <div class="quality-details" id="qualityDetails">
+            <div class="empty-state">
+              <p>Select a graded OpenAPI spec from the left panel to inspect its full compliance report, failed rules, and suggested fixes.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 4: Written Deliverables -->
+      <section id="panel-deliverables" class="tab-panel">
+        <div class="deliverables-layout">
+          <nav class="deliverables-sub-nav">
+            <button class="sub-tab active" data-subtab="decision">Decision Log</button>
+            <button class="sub-tab" data-subtab="failure">Failure Analysis</button>
+            <button class="sub-tab" data-subtab="scaling">Scaling Plan</button>
+          </nav>
+          <div class="deliverables-content" id="deliverablesContent">
+            <!-- Loaded dynamically from Markdown -->
+            <div class="loading-spinner">Loading deliverables...</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
